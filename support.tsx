@@ -11,15 +11,13 @@ import {
   Clock, 
   ArrowLeft, 
   Bug, 
-  Search, 
-  PackageX, 
-  AlertTriangle, 
   CreditCard, 
-  XCircle, 
-  MapPin, 
   UserX, 
-  HelpCircle,
-  Package
+  MapPin, 
+  Package, 
+  Shield, 
+  AlertTriangle, 
+  HelpCircle 
 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import {
@@ -38,99 +36,85 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
-const ISSUE_TYPES = [
+const COURIER_ISSUE_TYPES = [
   {
     id: "app_bug",
     label: "App Issue / Bug",
     icon: Bug,
-    template: "I'm experiencing a problem with the Droppit app. Please help resolve this issue.\n\nDetails:",
+    template: "I'm experiencing a problem with the Droppit courier app. Please help resolve this issue.\n\nDetails:",
     priority: "medium",
-  },
-  {
-    id: "cannot_find_courier",
-    label: "Can't Find My Courier",
-    icon: Search,
-    template: "I cannot locate the courier assigned to my pickup. Please help me contact them.",
-    priority: "high",
-  },
-  {
-    id: "courier_not_arrived",
-    label: "Courier Hasn't Arrived",
-    icon: Clock,
-    template: "My courier has not arrived yet. Please check the job status and provide an update.",
-    priority: "high",
-  },
-  {
-    id: "wrong_package",
-    label: "Wrong Package Picked Up",
-    icon: PackageX,
-    template: "The courier picked up the wrong package. Please help resolve this issue.",
-    priority: "medium",
-  },
-  {
-    id: "not_delivered",
-    label: "Package Not Delivered",
-    icon: AlertTriangle,
-    template: "My package was not delivered to the drop-off location. Please investigate.",
-    priority: "high",
   },
   {
     id: "payment_issue",
-    label: "Payment / Billing Issue",
+    label: "Payment / Payout Issue",
     icon: CreditCard,
-    template: "I believe there is an issue with my payment or billing. Please review my account.",
+    template: "I have a question or issue regarding my earnings or payout.",
     priority: "medium",
   },
   {
-    id: "cancel_pickup",
-    label: "Cancel Pickup",
-    icon: XCircle,
-    template: "I would like to cancel my pickup request. Please assist with the cancellation.",
-    priority: "medium",
-  },
-  {
-    id: "change_address",
-    label: "Change Pickup Address",
-    icon: MapPin,
-    template: "I need to change my pickup address. Please help update my order.",
-    priority: "medium",
-  },
-  {
-    id: "driver_behavior",
-    label: "Driver Behavior Issue",
+    id: "customer_issue",
+    label: "Issue with Customer",
     icon: UserX,
-    template: "I would like to report an issue with my courier's behavior.",
+    template: "I need to report an issue that occurred with a customer during a delivery.",
     priority: "medium",
+  },
+  {
+    id: "navigation_issue",
+    label: "Navigation / Address Problem",
+    icon: MapPin,
+    template: "I had trouble finding the pickup or drop-off location.",
+    priority: "low",
+  },
+  {
+    id: "job_problem",
+    label: "Problem with Job",
+    icon: Package,
+    template: "I encountered an issue while completing a job.",
+    priority: "high",
+  },
+  {
+    id: "account_issue",
+    label: "Account / Verification",
+    icon: Shield,
+    template: "I have a question about my account status or verification.",
+    priority: "medium",
+  },
+  {
+    id: "safety_concern",
+    label: "Safety Concern",
+    icon: AlertTriangle,
+    template: "I need to report a safety concern that occurred during a delivery.",
+    priority: "high",
   },
   {
     id: "general_question",
     label: "General Question",
     icon: HelpCircle,
-    template: "I have a question about Droppit.",
+    template: "I have a general question about being a Droppit courier.",
     priority: "low",
   },
 ];
 
-export default function SupportPage() {
+export default function CourierSupportPage() {
   const navigate = useNavigate()
   const tickets = useQuery(api.support.listMyTickets)
   const createTicket = useMutation(api.support.createTicket)
-  const myJobs = useQuery(api.jobs.getMyJobs)
+  const myJobs = useQuery(api.jobs.getCourierJobs, {})
   
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [step, setStep] = useState<1 | 2>(1)
-  const [selectedType, setSelectedType] = useState<typeof ISSUE_TYPES[0] | null>(null)
+  const [selectedType, setSelectedType] = useState<typeof COURIER_ISSUE_TYPES[0] | null>(null)
   const [subject, setSubject] = useState("")
   const [message, setMessage] = useState("")
   const [attachJob, setAttachJob] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Find active job
+  // Find active job for courier
   const activeJob = myJobs?.find(j => 
-    ["requested", "matched", "en_route", "arrived", "picked_up", "dropped_off"].includes(j.status)
+    ["matched", "en_route", "arrived", "picked_up", "dropped_off"].includes(j.status)
   )
 
-  const handleSelectType = (type: typeof ISSUE_TYPES[0]) => {
+  const handleSelectType = (type: typeof COURIER_ISSUE_TYPES[0]) => {
     setSelectedType(type)
     setSubject(type.label)
     setMessage(type.template)
@@ -155,7 +139,7 @@ export default function SupportPage() {
       toast.success("Your support ticket has been submitted. A support agent will respond shortly.")
       setIsDialogOpen(false)
       resetForm()
-      navigate(`/customer/support/${ticketId}`)
+      navigate(`/courier/support/${ticketId}`)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to create ticket")
     } finally {
@@ -176,15 +160,15 @@ export default function SupportPage() {
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Link to="/customer/dashboard">
+            <Link to="/courier/dashboard">
               <Button variant="ghost" size="icon" className="-ml-2">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
-            <h1 className="text-3xl font-bold tracking-tight">Support Tickets</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Courier Support</h1>
           </div>
           <p className="text-muted-foreground">
-            Get help with your orders or account.
+            Get help with your deliveries, payments, or account.
           </p>
         </div>
 
@@ -215,7 +199,7 @@ export default function SupportPage() {
 
             {step === 1 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 py-4">
-                {ISSUE_TYPES.map((type) => {
+                {COURIER_ISSUE_TYPES.map((type) => {
                   const Icon = type.icon
                   return (
                     <button
@@ -296,14 +280,14 @@ export default function SupportPage() {
                           htmlFor="attachJob"
                           className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                         >
-                          Attach current order info
+                          Attach current job info
                         </label>
                       </div>
                       
                       {attachJob && (
                         <div className="p-3 border rounded-lg bg-muted/30 space-y-2">
                           <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            <span>Active Order</span>
+                            <span>Active Job</span>
                             <Badge variant="outline" className="text-[10px] uppercase h-4">
                               {activeJob.status.replace("_", " ")}
                             </Badge>
@@ -368,7 +352,7 @@ export default function SupportPage() {
       ) : (
         <div className="grid gap-4">
           {tickets.map((ticket) => (
-            <Link key={ticket._id} to={`/customer/support/${ticket._id}`}>
+            <Link key={ticket._id} to={`/courier/support/${ticket._id}`}>
               <Card className="hover:bg-muted/50 transition-colors cursor-pointer relative overflow-hidden">
                 <CardHeader className="flex flex-row items-start justify-between space-y-0">
                   <div className="space-y-1">

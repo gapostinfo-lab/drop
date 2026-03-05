@@ -11,45 +11,38 @@ import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { 
   Mail, 
   Phone, 
-  MapPin, 
   LogOut, 
   Edit2, 
-  Plus, 
-  Trash2, 
-  Star,
-  Loader2,
-  Home,
-  Building2
+  Car,
+  Shield,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  AlertTriangle,
+  Loader2
 } from 'lucide-react'
 
-export default function CustomerProfilePage() {
+const statusConfig: Record<string, { icon: any, color: string, label: string }> = {
+  draft: { icon: Clock, color: 'bg-slate-500/20 text-slate-400', label: 'Draft' },
+  pending_review: { icon: Clock, color: 'bg-yellow-500/20 text-yellow-400', label: 'Pending Review' },
+  approved: { icon: CheckCircle2, color: 'bg-green-500/20 text-green-400', label: 'Approved' },
+  denied: { icon: XCircle, color: 'bg-red-500/20 text-red-400', label: 'Denied' },
+  suspended: { icon: AlertTriangle, color: 'bg-orange-500/20 text-orange-400', label: 'Suspended' },
+}
+
+export default function CourierProfilePage() {
   const navigate = useNavigate()
   const { signOut } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState({ name: '', phone: '' })
-  const [isAddingAddress, setIsAddingAddress] = useState(false)
-  const [newAddress, setNewAddress] = useState({
-    label: '',
-    street1: '',
-    street2: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    country: 'US',
-    isDefault: false,
-  })
 
   const profile = useQuery(api.profiles.getMyProfile)
-  const addresses = useQuery(api.addresses.getMySavedAddresses)
+  const application = useQuery(api.couriers.getMyApplication) as any
   const updateProfile = useMutation(api.profiles.updateProfile)
-  const saveAddress = useMutation(api.addresses.saveAddress)
-  const deleteAddress = useMutation(api.addresses.deleteAddress)
-  const updateAddress = useMutation(api.addresses.updateAddress)
 
   const handleSignOut = async () => {
     await signOut()
@@ -70,55 +63,6 @@ export default function CustomerProfilePage() {
     }
   }
 
-  const handleSaveAddress = async () => {
-    if (!newAddress.label || !newAddress.street1 || !newAddress.city || !newAddress.state || !newAddress.zipCode) {
-      toast.error('Please fill in all required fields')
-      return
-    }
-    try {
-      await saveAddress(newAddress)
-      toast.success('Address saved')
-      setIsAddingAddress(false)
-      setNewAddress({
-        label: '',
-        street1: '',
-        street2: '',
-        city: '',
-        state: '',
-        zipCode: '',
-        country: 'US',
-        isDefault: false,
-      })
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save address')
-    }
-  }
-
-  const handleDeleteAddress = async (addressId: string) => {
-    try {
-      await deleteAddress({ addressId: addressId as any })
-      toast.success('Address deleted')
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete address')
-    }
-  }
-
-  const handleSetDefault = async (addressId: string) => {
-    try {
-      await updateAddress({ addressId: addressId as any, isDefault: true })
-      toast.success('Default address updated')
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to set default')
-    }
-  }
-
-  const getLabelIcon = (label: string) => {
-    const lower = label.toLowerCase()
-    if (lower.includes('home')) return Home
-    if (lower.includes('work') || lower.includes('office')) return Building2
-    return MapPin
-  }
-
   if (!profile) {
     return (
       <AppShell>
@@ -129,13 +73,18 @@ export default function CustomerProfilePage() {
     )
   }
 
+  const status = application?.status || 'draft'
+  const StatusIcon = statusConfig[status]?.icon || Clock
+  const statusColor = statusConfig[status]?.color || statusConfig.draft.color
+  const statusLabel = statusConfig[status]?.label || 'Unknown'
+
   return (
     <AppShell>
       <div className="space-y-8">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold font-outfit">Profile</h1>
-          <p className="text-muted-foreground">Manage your account and saved addresses</p>
+          <p className="text-muted-foreground">Manage your courier account</p>
         </div>
 
         {/* Profile Card */}
@@ -150,7 +99,7 @@ export default function CustomerProfilePage() {
                 <div>
                   <CardTitle className="text-xl font-outfit">{profile.name}</CardTitle>
                   <CardDescription className="flex items-center gap-2">
-                    <Badge variant="outline" className="capitalize">{profile.role}</Badge>
+                    <Badge variant="outline" className="capitalize">Courier</Badge>
                   </CardDescription>
                 </div>
               </div>
@@ -209,179 +158,67 @@ export default function CustomerProfilePage() {
                 <Phone className="w-5 h-5 text-muted-foreground" />
                 <div>
                   <p className="text-xs text-muted-foreground">Phone</p>
-                  <p className="font-medium">{profile.phone || 'Not set'}</p>
+                  <p className="font-medium">{profile.phone || application?.phone || 'Not set'}</p>
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Saved Addresses */}
+        {/* Verification Status */}
         <Card className="bg-slate-900/60 border-slate-700">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="font-outfit">Saved Addresses</CardTitle>
-                <CardDescription>Quick access addresses for booking</CardDescription>
-              </div>
-              <Dialog open={isAddingAddress} onOpenChange={setIsAddingAddress}>
-                <DialogTrigger asChild>
-                  <Button size="sm">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Address
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Add New Address</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-                    <div className="space-y-2">
-                      <Label>Label *</Label>
-                      <Input 
-                        value={newAddress.label}
-                        onChange={(e) => setNewAddress(prev => ({ ...prev, label: e.target.value }))}
-                        placeholder="Home, Work, etc."
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Street Address *</Label>
-                      <Input 
-                        value={newAddress.street1}
-                        onChange={(e) => setNewAddress(prev => ({ ...prev, street1: e.target.value }))}
-                        placeholder="123 Main St"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Apt, Suite, etc.</Label>
-                      <Input 
-                        value={newAddress.street2}
-                        onChange={(e) => setNewAddress(prev => ({ ...prev, street2: e.target.value }))}
-                        placeholder="Apt 4B"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>City *</Label>
-                        <Input 
-                          value={newAddress.city}
-                          onChange={(e) => setNewAddress(prev => ({ ...prev, city: e.target.value }))}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>State *</Label>
-                        <Input 
-                          value={newAddress.state}
-                          onChange={(e) => setNewAddress(prev => ({ ...prev, state: e.target.value }))}
-                          placeholder="NY"
-                          maxLength={2}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>ZIP Code *</Label>
-                      <Input 
-                        value={newAddress.zipCode}
-                        onChange={(e) => setNewAddress(prev => ({ ...prev, zipCode: e.target.value }))}
-                        placeholder="10001"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="isDefault"
-                        checked={newAddress.isDefault}
-                        onChange={(e) => setNewAddress(prev => ({ ...prev, isDefault: e.target.checked }))}
-                        className="rounded"
-                      />
-                      <Label htmlFor="isDefault" className="cursor-pointer">Set as default address</Label>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <DialogClose asChild>
-                      <Button variant="outline">Cancel</Button>
-                    </DialogClose>
-                    <Button onClick={handleSaveAddress}>Save Address</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
+            <CardTitle className="font-outfit flex items-center gap-2">
+              <Shield className="w-5 h-5" />
+              Verification Status
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            {!addresses || addresses.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <MapPin className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>No saved addresses yet</p>
-                <p className="text-sm">Add addresses for faster booking</p>
+            <div className={`p-4 rounded-lg ${statusColor} flex items-center gap-3`}>
+              <StatusIcon className="w-6 h-6" />
+              <div>
+                <p className="font-semibold">{statusLabel}</p>
+                <p className="text-sm opacity-80">
+                  {status === 'approved' && 'You are verified and can accept jobs'}
+                  {status === 'pending_review' && 'Your application is being reviewed'}
+                  {status === 'denied' && (application?.denialReason || 'Your application was not approved')}
+                  {status === 'suspended' && (application?.suspensionReason || 'Your account has been suspended')}
+                  {status === 'draft' && 'Complete your application to get verified'}
+                </p>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {addresses.map((addr) => {
-                  const Icon = getLabelIcon(addr.label)
-                  return (
-                    <div 
-                      key={addr._id} 
-                      className="flex items-start gap-4 p-4 rounded-lg bg-slate-800/50 border border-slate-700"
-                    >
-                      <div className="p-2 rounded-lg bg-slate-700">
-                        <Icon className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">{addr.label}</p>
-                          {addr.isDefault && (
-                            <Badge variant="outline" className="text-xs">
-                              <Star className="w-3 h-3 mr-1" />
-                              Default
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {addr.street1}{addr.street2 ? `, ${addr.street2}` : ''}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {addr.city}, {addr.state} {addr.zipCode}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {!addr.isDefault && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleSetDefault(addr._id)}
-                          >
-                            Set Default
-                          </Button>
-                        )}
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-destructive">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Address</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete "{addr.label}"? This cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeleteAddress(addr._id)}>
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+            </div>
           </CardContent>
         </Card>
+
+        {/* Vehicle Info */}
+        {application && (
+          <Card className="bg-slate-900/60 border-slate-700">
+            <CardHeader>
+              <CardTitle className="font-outfit flex items-center gap-2">
+                <Car className="w-5 h-5" />
+                Vehicle Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="p-3 rounded-lg bg-slate-800/50">
+                  <p className="text-xs text-muted-foreground">Vehicle</p>
+                  <p className="font-medium">
+                    {application.vehicleYear} {application.vehicleMake} {application.vehicleModel}
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-slate-800/50">
+                  <p className="text-xs text-muted-foreground">Color</p>
+                  <p className="font-medium">{application.vehicleColor}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-slate-800/50">
+                  <p className="text-xs text-muted-foreground">License Plate</p>
+                  <p className="font-medium">{application.vehiclePlate}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Sign Out */}
         <Card className="bg-slate-900/60 border-slate-700">

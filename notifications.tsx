@@ -8,12 +8,12 @@ import { formatDistanceToNow } from 'date-fns'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
-export default function CustomerNotificationsPage() {
+export default function CourierNotificationsPage() {
   const navigate = useNavigate()
-  const notifications = useQuery(api.customerNotifications.getMyNotifications, { limit: 50 })
-  const unreadCount = useQuery(api.customerNotifications.countUnread)
-  const markRead = useMutation(api.customerNotifications.markNotificationRead)
-  const markAllRead = useMutation(api.customerNotifications.markAllRead)
+  const notifications = useQuery(api.couriers.getMyNotifications, { limit: 50 })
+  const unreadCount = useQuery(api.couriers.countUnreadNotifications)
+  const markRead = useMutation(api.couriers.markNotificationRead)
+  const markAllRead = useMutation(api.couriers.markAllNotificationsRead)
 
   const handleMarkAllRead = async () => {
     try {
@@ -26,11 +26,16 @@ export default function CustomerNotificationsPage() {
     }
   }
 
-  const handleNotificationClick = async (notificationId: any, jobId?: string) => {
+  const handleNotificationClick = async (notificationId: any, type?: string) => {
     try {
       await markRead({ notificationId })
-      if (jobId) {
-        navigate(`/customer/order/${jobId}`)
+      // Courier navigation logic based on type
+      if (type?.includes('available') || type?.includes('new_job')) {
+        navigate('/courier/available-jobs')
+      } else if (type?.includes('job') || type?.includes('assigned') || type?.includes('message')) {
+        navigate('/courier/active-job')
+      } else if (type?.includes('application')) {
+        navigate('/courier/profile')
       }
     } catch (error) {
       console.error('Failed to mark notification as read', error)
@@ -88,7 +93,7 @@ export default function CustomerNotificationsPage() {
                 <Card 
                   key={notif._id}
                   className={`cursor-pointer transition-colors hover:bg-muted/50 ${!notif.isRead ? 'bg-primary/5 border-primary/20' : ''}`}
-                  onClick={() => handleNotificationClick(notif._id, notif.jobId)}
+                  onClick={() => handleNotificationClick(notif._id, notif.type)}
                 >
                   <CardContent className="p-3">
                     <div className="flex items-start gap-3">

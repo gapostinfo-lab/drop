@@ -13,7 +13,7 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import type { Id } from "@convex/dataModel"
 
-export default function SupportTicketPage() {
+export default function CourierSupportTicketPage() {
   const { ticketId } = useParams<{ ticketId: string }>()
   const id = ticketId as Id<"supportTickets">
   
@@ -29,7 +29,7 @@ export default function SupportTicketPage() {
   // Mark as read when viewing
   useEffect(() => {
     if (id) {
-      markRead({ ticketId: id, viewerType: "customer" }).catch(console.error)
+      markRead({ ticketId: id, viewerType: "courier" }).catch(console.error)
     }
   }, [id, markRead, messages]) // Re-run when new messages arrive
 
@@ -72,7 +72,7 @@ export default function SupportTicketPage() {
       <div className="container max-w-4xl py-8 text-center space-y-4">
         <h1 className="text-2xl font-bold">Ticket not found</h1>
         <p className="text-muted-foreground">The support ticket you're looking for doesn't exist.</p>
-        <Link to="/customer/support">
+        <Link to="/courier/support">
           <Button variant="outline">Back to Tickets</Button>
         </Link>
       </div>
@@ -84,7 +84,7 @@ export default function SupportTicketPage() {
   return (
     <div className="container max-w-4xl py-8 h-[calc(100vh-4rem)] flex flex-col">
       <div className="flex items-center gap-4 mb-6">
-        <Link to="/customer/support">
+        <Link to="/courier/support">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -106,19 +106,19 @@ export default function SupportTicketPage() {
         <ScrollArea className="flex-1 p-4">
           <div className="space-y-4">
             {messages.map((msg) => {
-              const isCustomer = msg.senderType === "customer"
+              const isCourier = msg.senderType === "courier"
               return (
                 <div
                   key={msg._id}
                   className={cn(
                     "flex flex-col max-w-[80%] space-y-1",
-                    isCustomer ? "ml-auto items-end" : "mr-auto items-start"
+                    isCourier ? "ml-auto items-end" : "mr-auto items-start"
                   )}
                 >
                   <div
                     className={cn(
                       "px-4 py-2 rounded-2xl text-sm",
-                      isCustomer
+                      isCourier
                         ? "bg-primary text-primary-foreground rounded-tr-none"
                         : "bg-muted text-muted-foreground rounded-tl-none"
                     )}
