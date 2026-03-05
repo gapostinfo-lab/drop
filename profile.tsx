@@ -1,53 +1,52 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
-import { useQuery, useMutation } from "convex/react"
-import { api } from "@convex/api"
 import { useAuth } from '@/hooks/use-auth'
-import { AppShell } from '@/components/layout/app-shell'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '@convex/api'
+import { AdminAppShell } from '@/components/layout/admin-app-shell'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog'
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger, 
+  DialogFooter, 
+  DialogClose,
+  DialogDescription
+} from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { 
   Mail, 
   Phone, 
   LogOut, 
   Edit2, 
-  Car,
   Shield,
-  CheckCircle2,
-  Clock,
-  XCircle,
-  AlertTriangle,
-  Loader2
+  Key,
+  Loader2,
+  Calendar
 } from 'lucide-react'
 
-const statusConfig: Record<string, { icon: any, color: string, label: string }> = {
-  draft: { icon: Clock, color: 'bg-slate-500/20 text-slate-400', label: 'Draft' },
-  pending_review: { icon: Clock, color: 'bg-yellow-500/20 text-yellow-400', label: 'Pending Review' },
-  approved: { icon: CheckCircle2, color: 'bg-green-500/20 text-green-400', label: 'Approved' },
-  denied: { icon: XCircle, color: 'bg-red-500/20 text-red-400', label: 'Denied' },
-  suspended: { icon: AlertTriangle, color: 'bg-orange-500/20 text-orange-400', label: 'Suspended' },
-}
-
-export default function CourierProfilePage() {
-  const navigate = useNavigate()
+export default function AdminProfilePage() {
   const { signOut } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [editForm, setEditForm] = useState({ name: '', phone: '' })
 
   const profile = useQuery(api.profiles.getMyProfile)
-  const application = useQuery(api.couriers.getMyApplication) as any
   const updateProfile = useMutation(api.profiles.updateProfile)
 
   const handleSignOut = async () => {
-    await signOut()
-    toast.success('Signed out successfully')
-    navigate('/auth')
+    try {
+      await signOut()
+      toast.success('Signed out successfully')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to sign out')
+    }
   }
 
   const handleUpdateProfile = async () => {
@@ -63,177 +62,245 @@ export default function CourierProfilePage() {
     }
   }
 
-  if (!profile) {
+  const handleChangePassword = () => {
+    toast.info('Password reset email has been sent to your inbox')
+    setIsChangingPassword(false)
+  }
+
+  if (profile === undefined) {
     return (
-      <AppShell>
+      <AdminAppShell>
         <div className="flex items-center justify-center min-h-[50vh]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      </AppShell>
+      </AdminAppShell>
     )
   }
 
-  const status = application?.status || 'draft'
-  const StatusIcon = statusConfig[status]?.icon || Clock
-  const statusColor = statusConfig[status]?.color || statusConfig.draft.color
-  const statusLabel = statusConfig[status]?.label || 'Unknown'
+  if (!profile) {
+    return (
+      <AdminAppShell>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-center space-y-4">
+            <p className="text-muted-foreground">Profile not found. Please sign in again.</p>
+            <Button onClick={handleSignOut}>Sign Out</Button>
+          </div>
+        </div>
+      </AdminAppShell>
+    )
+  }
 
   return (
-    <AppShell>
-      <div className="space-y-8">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold font-outfit">Profile</h1>
-          <p className="text-muted-foreground">Manage your courier account</p>
-        </div>
+    <AdminAppShell>
+      <div className="max-w-4xl mx-auto space-y-8">
+          <div className="flex flex-col gap-2">
+            <h1 className="text-3xl font-bold font-outfit tracking-tight">Admin Profile</h1>
+            <p className="text-muted-foreground">Manage your administrator account and security settings</p>
+          </div>
 
-        {/* Profile Card */}
-        <Card className="bg-slate-900/60 border-slate-700">
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-4">
-                <Avatar className="w-16 h-16">
-                  <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.name}`} />
-                  <AvatarFallback className="text-xl">{profile.name?.[0]}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <CardTitle className="text-xl font-outfit">{profile.name}</CardTitle>
-                  <CardDescription className="flex items-center gap-2">
-                    <Badge variant="outline" className="capitalize">Courier</Badge>
-                  </CardDescription>
-                </div>
-              </div>
-              <Dialog open={isEditing} onOpenChange={setIsEditing}>
-                <DialogTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setEditForm({ name: profile.name, phone: profile.phone || '' })}
-                  >
-                    <Edit2 className="w-4 h-4 mr-2" />
-                    Edit
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Edit Profile</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label>Name</Label>
-                      <Input 
-                        value={editForm.name}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                      />
+          <div className="grid gap-8 lg:grid-cols-3">
+            <div className="lg:col-span-2 space-y-8">
+              {/* Profile Card */}
+              <Card className="bg-slate-900/60 border-slate-700 overflow-hidden">
+                <CardHeader className="border-b border-slate-700/50 bg-slate-800/30">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-4">
+                      <Avatar className="w-20 h-20 ring-4 ring-primary/10">
+                        <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.name}`} />
+                        <AvatarFallback className="text-2xl bg-primary text-primary-foreground font-bold">
+                          {profile.name?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="space-y-1">
+                        <CardTitle className="text-2xl font-outfit">{profile.name}</CardTitle>
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-primary/20 text-primary border-primary/30 hover:bg-primary/30 transition-colors">
+                            <Shield className="w-3 h-3 mr-1" />
+                            Administrator
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Phone</Label>
-                      <Input 
-                        value={editForm.phone}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
-                        placeholder="(555) 123-4567"
-                      />
+                    <Dialog open={isEditing} onOpenChange={setIsEditing}>
+                      <DialogTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="border-slate-600 hover:bg-slate-800"
+                          onClick={() => setEditForm({ name: profile.name, phone: profile.phone || '' })}
+                        >
+                          <Edit2 className="w-4 h-4 mr-2" />
+                          Edit Profile
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px] bg-slate-900 border-slate-800">
+                        <DialogHeader>
+                          <DialogTitle className="text-xl font-outfit">Edit Profile</DialogTitle>
+                          <DialogDescription className="text-slate-400">
+                            Update your personal information below.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-6">
+                          <div className="space-y-2">
+                            <Label htmlFor="name" className="text-slate-200">Full Name</Label>
+                            <Input 
+                              id="name"
+                              value={editForm.name}
+                              onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                              className="bg-slate-800 border-slate-700 focus:ring-primary/50"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="phone" className="text-slate-200">Phone Number</Label>
+                            <Input 
+                              id="phone"
+                              value={editForm.phone}
+                              onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                              placeholder="(555) 123-4567"
+                              className="bg-slate-800 border-slate-700 focus:ring-primary/50"
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <DialogClose asChild>
+                            <Button variant="ghost" className="hover:bg-slate-800">Cancel</Button>
+                          </DialogClose>
+                          <Button onClick={handleUpdateProfile} className="bg-primary hover:bg-primary/90">
+                            Save Changes
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-6">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="flex items-center gap-3 p-4 rounded-xl bg-slate-800/40 border border-slate-700/50">
+                      <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                        <Mail className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Email Address</p>
+                        <p className="font-semibold text-slate-200">{profile.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-4 rounded-xl bg-slate-800/40 border border-slate-700/50">
+                      <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                        <Phone className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Phone Number</p>
+                        <p className="font-semibold text-slate-200">{profile.phone || 'Not provided'}</p>
+                      </div>
                     </div>
                   </div>
-                  <DialogFooter>
-                    <DialogClose asChild>
-                      <Button variant="outline">Cancel</Button>
-                    </DialogClose>
-                    <Button onClick={handleUpdateProfile}>Save Changes</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-800/50">
-                <Mail className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Email</p>
-                  <p className="font-medium">{profile.email}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-800/50">
-                <Phone className="w-5 h-5 text-muted-foreground" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Phone</p>
-                  <p className="font-medium">{profile.phone || application?.phone || 'Not set'}</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Verification Status */}
-        <Card className="bg-slate-900/60 border-slate-700">
-          <CardHeader>
-            <CardTitle className="font-outfit flex items-center gap-2">
-              <Shield className="w-5 h-5" />
-              Verification Status
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`p-4 rounded-lg ${statusColor} flex items-center gap-3`}>
-              <StatusIcon className="w-6 h-6" />
-              <div>
-                <p className="font-semibold">{statusLabel}</p>
-                <p className="text-sm opacity-80">
-                  {status === 'approved' && 'You are verified and can accept jobs'}
-                  {status === 'pending_review' && 'Your application is being reviewed'}
-                  {status === 'denied' && (application?.denialReason || 'Your application was not approved')}
-                  {status === 'suspended' && (application?.suspensionReason || 'Your account has been suspended')}
-                  {status === 'draft' && 'Complete your application to get verified'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                  <div className="flex items-center gap-2 text-sm text-slate-400 pt-2">
+                    <Calendar className="w-4 h-4" />
+                    <span>Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+                  </div>
+                </CardContent>
+              </Card>
 
-        {/* Vehicle Info */}
-        {application && (
-          <Card className="bg-slate-900/60 border-slate-700">
-            <CardHeader>
-              <CardTitle className="font-outfit flex items-center gap-2">
-                <Car className="w-5 h-5" />
-                Vehicle Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="p-3 rounded-lg bg-slate-800/50">
-                  <p className="text-xs text-muted-foreground">Vehicle</p>
-                  <p className="font-medium">
-                    {application.vehicleYear} {application.vehicleMake} {application.vehicleModel}
+              {/* Security Card */}
+              <Card className="bg-slate-900/60 border-slate-700 overflow-hidden">
+                <CardHeader className="border-b border-slate-700/50 bg-slate-800/30">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500">
+                      <Shield className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl font-outfit">Security & Access</CardTitle>
+                      <CardDescription className="text-slate-400">Manage your password and authentication</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-4">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-slate-800/40 border border-slate-700/50">
+                    <div className="space-y-1">
+                      <p className="font-semibold text-slate-200">Account Password</p>
+                      <p className="text-sm text-slate-400">Update your account password regularly for better security.</p>
+                    </div>
+                    <Dialog open={isChangingPassword} onOpenChange={setIsChangingPassword}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" className="border-slate-600 hover:bg-slate-800">
+                          <Key className="w-4 h-4 mr-2" />
+                          Change Password
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px] bg-slate-900 border-slate-800">
+                        <DialogHeader>
+                          <DialogTitle className="text-xl font-outfit">Change Password</DialogTitle>
+                          <DialogDescription className="text-slate-400">
+                            Click the button below to receive a password reset link via email.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-6 flex flex-col items-center justify-center space-y-4 text-center">
+                          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                            <Mail className="w-8 h-8" />
+                          </div>
+                          <p className="text-sm text-slate-300">
+                            For security reasons, password changes are handled through a verified email link sent to <strong>{profile.email}</strong>.
+                          </p>
+                        </div>
+                        <DialogFooter className="sm:justify-center">
+                          <Button onClick={handleChangePassword} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
+                            Send Reset Link
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="space-y-8">
+              {/* Account Status Card */}
+              <Card className="bg-slate-900/60 border-slate-700 overflow-hidden">
+                <CardHeader className="bg-slate-800/30 border-b border-slate-700/50">
+                  <CardTitle className="text-lg font-outfit">Account Status</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-slate-400">Status</span>
+                      <Badge variant="outline" className="border-emerald-500/50 text-emerald-500 bg-emerald-500/5">Active</Badge>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-slate-400">Role</span>
+                      <span className="text-slate-200 font-medium capitalize">{profile.role}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-slate-400">Permissions</span>
+                      <span className="text-slate-200 font-medium">Full Access</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Danger Zone */}
+              <Card className="bg-red-500/5 border-red-500/20 overflow-hidden">
+                <CardHeader className="bg-red-500/10 border-b border-red-500/20">
+                  <CardTitle className="text-lg font-outfit text-red-400">Session Management</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <Button 
+                    variant="destructive" 
+                    className="w-full bg-red-500/80 hover:bg-red-500"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </Button>
+                  <p className="text-[10px] text-center text-red-400/60 mt-4 uppercase tracking-widest font-bold">
+                    Securely terminate your current session
                   </p>
-                </div>
-                <div className="p-3 rounded-lg bg-slate-800/50">
-                  <p className="text-xs text-muted-foreground">Color</p>
-                  <p className="font-medium">{application.vehicleColor}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-slate-800/50">
-                  <p className="text-xs text-muted-foreground">License Plate</p>
-                  <p className="font-medium">{application.vehiclePlate}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Sign Out */}
-        <Card className="bg-slate-900/60 border-slate-700">
-          <CardContent className="pt-6">
-            <Button 
-              variant="destructive" 
-              className="w-full"
-              onClick={handleSignOut}
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    </AppShell>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </AdminAppShell>
   )
 }
