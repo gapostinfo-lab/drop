@@ -1,17 +1,48 @@
-import { convexAuth } from "@convex-dev/auth/server";
-import { Password } from "@convex-dev/auth/providers/Password";
+import { QueryCtx, MutationCtx } from "../_generated/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
+import { Id } from "../_generated/dataModel";
 
-export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
-  providers: [Password],
-  session: {
-    // How long can a session last without reauthenticating (30 days)
-    totalDurationMs: 1000 * 60 * 60 * 24 * 30,
-    // How long can a session last without activity (7 days)
-    inactiveDurationMs: 1000 * 60 * 60 * 24 * 7,
-  },
-  jwt: {
-    // How long is the JWT valid (24 hours instead of default 1 hour)
-    // This reduces how often refresh is needed
-    durationMs: 1000 * 60 * 60 * 24,
-  },
-});
+export type AuthUser = {
+  userId: Id<"users">;
+  // Add identity info for debugging
+  tokenIdentifier?: string;
+};
+
+/**
+ * Get the authenticated user's ID with detailed logging for debugging.
+ * Returns null if not authenticated (never throws).
+ */
+export async function getAuthUser(
+  ctx: QueryCtx | MutationCtx
+): Promise<AuthUser | null> {
+  try {
+    const userId = await getAuthUserId(ctx);
+    
+    if (!userId) {
+      console.log("[AUTH] No authenticated user");
+      return null;
+    }
+    
+    console.log("[AUTH] User authenticated:", { userId: userId.toString() });
+    
+    return {
+      userId,
+    };
+  } catch (error) {
+    console.error("[AUTH] Error getting user:", error);
+    return null;
+  }
+}
+
+/**
+ * Require authentication - throws if not authenticated.
+ */
+export async function requireAuth(
+  ctx: QueryCtx | MutationCtx
+): Promise<AuthUser> {
+  const user = await getAuthUser(ctx);
+  if (!user) {
+    throw new Error("UNAUTHORIZED: Please sign in");
+  }
+  return user;
+}

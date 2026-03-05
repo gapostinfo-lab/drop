@@ -1,7 +1,6 @@
 /**
  * Centralized pricing configuration for Droppit
  * All prices are in CENTS to avoid floating point issues
- * This must match convex/lib/pricing.ts
  */
 export const pricingConfig = {
   // Base pickup fee (mandatory per booking)
@@ -16,36 +15,6 @@ export const pricingConfig = {
   // Platform commission percentage
   commissionPercent: 25,
 } as const;
-
-/**
- * Package size display info
- */
-export const packageSizes = [
-  { 
-    id: 'small' as const, 
-    label: 'Small', 
-    desc: 'Envelope or small box (shoebox size)',
-    priceCents: pricingConfig.smallCents,
-  },
-  { 
-    id: 'medium' as const, 
-    label: 'Medium', 
-    desc: 'Standard shipping box (carry-on size)',
-    priceCents: pricingConfig.mediumCents,
-  },
-  { 
-    id: 'large' as const, 
-    label: 'Large', 
-    desc: 'Large box (requires two hands)',
-    priceCents: pricingConfig.largeCents,
-  },
-  { 
-    id: 'oversized' as const, 
-    label: 'Oversized', 
-    desc: 'Very large or heavy item',
-    priceCents: pricingConfig.oversizedCents,
-  },
-] as const;
 
 /**
  * Calculate total price in cents
@@ -69,6 +38,26 @@ export function calculateTotalCents(quantities: {
   const pickupFeeApplied = totalPackages > 0 ? pricingConfig.pickupFeeCents : 0;
   
   return pickupFeeApplied + packagesCents;
+}
+
+/**
+ * Calculate platform commission and courier payout
+ */
+export function calculatePayoutSplit(totalCents: number): {
+  platformFeeCents: number;
+  courierPayoutCents: number;
+} {
+  const platformFeeCents = Math.round(totalCents * pricingConfig.commissionPercent / 100);
+  const courierPayoutCents = totalCents - platformFeeCents;
+  
+  return { platformFeeCents, courierPayoutCents };
+}
+
+/**
+ * Format cents as USD string (e.g., 1200 -> "$12.00")
+ */
+export function formatCentsAsUSD(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
 }
 
 /**
@@ -103,30 +92,4 @@ export function getPriceBreakdown(quantities: {
     totalCents: pickupFeeApplied + packagesCents,
     totalPackages,
   };
-}
-
-/**
- * Format cents as USD string (e.g., 1200 -> "$12.00")
- */
-export function formatCents(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
-
-/**
- * Get package summary string (e.g., "2x Small, 1x Large")
- */
-export function getPackageSummary(quantities: {
-  smallQty: number;
-  mediumQty: number;
-  largeQty: number;
-  oversizedQty: number;
-}): string {
-  const parts = [
-    quantities.smallQty > 0 && `${quantities.smallQty}x Small`,
-    quantities.mediumQty > 0 && `${quantities.mediumQty}x Medium`,
-    quantities.largeQty > 0 && `${quantities.largeQty}x Large`,
-    quantities.oversizedQty > 0 && `${quantities.oversizedQty}x Oversized`,
-  ].filter(Boolean);
-  
-  return (parts as string[]).join(', ') || 'No packages';
 }
