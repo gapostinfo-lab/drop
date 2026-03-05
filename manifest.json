@@ -1,0 +1,25 @@
+{
+  "name": "Droppit",
+  "short_name": "Droppit",
+  "version": "1.1.0",
+  "description": "On-demand package pickup and delivery",
+  "start_url": "/?source=pwa",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#39FF14",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
